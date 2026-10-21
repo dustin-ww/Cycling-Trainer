@@ -1,69 +1,72 @@
-import Image from "next/image";
+import { Suspense } from "react";
+import { connection } from "next/server";
+import { CoachChat } from "@/components/coach/CoachChat";
+import { CheckInSheet } from "@/components/checkin/CheckInSheet";
+import { WorkoutCard } from "@/components/plan/WorkoutCard";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getAthlete, getCoachHistory, getPlan, getTrainingLoad } from "@/lib/data/queries";
+import { toChatMessages } from "@/lib/coach/display";
+import { TOOL_LABELS } from "@/lib/coach/tools";
+import { localDate } from "@/lib/dates";
+import { FORM_TONE_CLASS } from "@/lib/labels";
+import { cn } from "@/lib/utils";
 
-export default function Home() {
+export default function CoachPage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <main className="flex flex-1 flex-col">
+      <header className="px-4 pb-2 pt-[calc(1rem+env(safe-area-inset-top))]">
+        <h1 className="text-2xl font-bold">Your coach</h1>
+      </header>
+      <Suspense fallback={<Skeleton className="mx-4 h-28 rounded-xl" />}>
+        <Today />
+      </Suspense>
+      <Suspense fallback={<div className="flex-1" />}>
+        <Chat />
+      </Suspense>
+    </main>
   );
+}
+
+async function Today() {
+  await connection();
+  const athlete = await getAthlete();
+  const today = localDate();
+  const [load, plan] = await Promise.all([getTrainingLoad(athlete.id, 42), getPlan(athlete.id, today, today)]);
+
+  return (
+    <section className="space-y-3 px-4 pb-4">
+      <Card>
+        <CardContent className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs text-muted-foreground">Today&apos;s form</p>
+            <p className={cn("text-lg font-semibold", FORM_TONE_CLASS[load.form.tone])}>{load.form.label}</p>
+            <p className="text-xs text-muted-foreground">{load.form.description}</p>
+          </div>
+          <dl className="grid shrink-0 grid-cols-3 gap-3 text-center">
+            {[
+              ["Fitness", load.current.ctl],
+              ["Fatigue", load.current.atl],
+              ["Form", load.current.tsb],
+            ].map(([label, value]) => (
+              <div key={label as string} className="flex flex-col-reverse">
+                <dt className="text-[10px] uppercase text-muted-foreground">{label}</dt>
+                <dd className="text-lg font-semibold tabular-nums">{Math.round(value as number)}</dd>
+              </div>
+            ))}
+          </dl>
+        </CardContent>
+      </Card>
+      {plan.map((w) => (
+        <WorkoutCard key={w.id} workout={w} compact />
+      ))}
+      <CheckInSheet />
+    </section>
+  );
+}
+
+async function Chat() {
+  const athlete = await getAthlete();
+  const history = await getCoachHistory(athlete.id);
+  return <CoachChat initialMessages={toChatMessages(history, TOOL_LABELS)} />;
 }

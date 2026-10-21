@@ -1,14 +1,17 @@
 {
-  "name": "Next.js",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:24",
-  "forwardPorts": [3000],
-  "mounts": [
-    "source=${localWorkspaceFolderBasename}-node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume"
-  ],
-  "postCreateCommand": "sudo chown node node_modules && npm install",
+  "name": "Cycling Trainer",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/Cycling-Trainer",
+  "shutdownAction": "stopCompose",
+  "forwardPorts": [3000, "db:5432"],
+  "postCreateCommand": "sudo chown node node_modules && sudo apt-get update && sudo apt-get install -y postgresql-client && npm install",
   "customizations": {
     "vscode": {
-      "extensions": ["dbaeumer.vscode-eslint", "bradlc.vscode-tailwindcss"]
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "bradlc.vscode-tailwindcss"
+      ]
     }
   }
 }

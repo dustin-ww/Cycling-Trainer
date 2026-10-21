@@ -4,6 +4,12 @@ const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
+  experimental: {
+    serverActions: {
+      // FIT files from longer rides easily reach several MB
+      bodySizeLimit: "25mb",
+    },
+  },
   turbopack: {
     rules: {
       "*.css": {

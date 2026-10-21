@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Cycling Coach
 
-## Getting Started
+Mobile-first Trainings-App (PWA) mit einem KI-Coach im Mittelpunkt: Er wertet Trainingsdaten aus, plant auf Basis deiner Ziele, reagiert spontan auf Änderungen (Krankheit, Zeitmangel, Müdigkeit), schlägt Ausgleichssport vor – und begründet jede Entscheidung nachvollziehbar.
 
-First, run the development server:
+## Setup (Devcontainer)
 
 ```bash
+cp .env.example .env.local      # ANTHROPIC_API_KEY eintragen
+npm install
+npm run db:migrate              # Tabellen anlegen
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Auf dem Handy: `http://<rechner-ip>:3000` öffnen → „Zum Home-Bildschirm hinzufügen“.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Struktur
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+app/
+  page.tsx              Coach (Startseite): Form heute, heutige Einheit, Check-in, Chat
+  plan/                 Trainingsplan mit „Warum diese Einheit?“ je Einheit
+  activities/           Fitness-Chart (CTL/ATL/TSB), FIT-Import, manuelle Einträge
+  goals/                Ziele (A/B/C-Priorität) und Athletenprofil
+  api/coach/route.ts    Streaming-Endpoint des Coaches (NDJSON)
+  manifest.ts           PWA-Manifest
+components/             UI, nach Feature gruppiert
+lib/
+  coach/
+    agent.ts            Agent-Loop (Claude Tool Runner, Streaming, Verlauf speichern)
+    tools.ts            Tools: Daten lesen, Einheiten planen/ändern, Befinden notieren
+    prompt.ts           System-Prompt inkl. Erklärbarkeits-Regeln
+    display.ts          API-Verlauf → Chat-Ansicht
+  training/             Reine Funktionen: NP, IF, TSS, Zonen, Power Curve, CTL/ATL/TSB (+ Tests)
+  fit/parse.ts          FIT-Datei → Aktivität mit berechneten Kennzahlen
+  data/queries.ts       Lesende DB-Zugriffe
+  actions.ts            Server Actions (Formulare)
+  db/schema.ts          Drizzle-Schema (Postgres)
+drizzle/                SQL-Migrationen
+```
 
-## Learn More
+## Erklärbarkeit
 
-To learn more about Next.js, take a look at the following resources:
+- Jede geplante Einheit speichert eine strukturierte `rationale`: Zusammenfassung, verwendete Datenpunkte mit Wirkung (↑/↓), Trainingsprinzip, Sicherheit der Empfehlung, Alternative.
+- Änderungen durch den Coach landen mit Grund im `changeLog` der Einheit.
+- Im Chat wird angezeigt, welche Daten der Coach geprüft hat (Tool-Aufrufe).
+- Bei jeder Aktivität ist sichtbar, wie der TSS berechnet wurde (Leistung, Herzfrequenz oder RPE-Schätzung).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`npm run test` · `npm run typecheck` · `npm run lint` · `npm run db:generate` (nach Schema-Änderungen) · `npm run db:studio`
